@@ -1,25 +1,33 @@
-from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageFilter, ImageEnhance
+from PIL import (Image,
+                 ImageDraw,
+                 ImageFont,
+                 ImageOps,
+                 ImageFilter,
+                 ImageEnhance
+                 )
+import numpy as np
 
 
 def openImage(image):
-    
     image = Image.open(image)
     draw = ImageDraw.Draw(image)
     return image, draw
 
-def openImageAsJPG(image):
 
+def openImageAsJPG(image):
     return Image.open(image).convert("RGB")
 
-def openImageAsPNG(image):
 
+def openImageAsPNG(image):
     return Image.open(image).convert("RGBA")
 
-def backgroundPNG(MAX_W, MAX_H, backgroundColor = None):
-    background = Image.new("RGBA", (MAX_W, MAX_H), color = backgroundColor)
+
+def backgroundPNG(MAX_W, MAX_H, backgroundColor=None):
+    background = Image.new("RGBA", (MAX_W, MAX_H), color=backgroundColor)
     draw = ImageDraw.Draw(background)
 
     return background, draw
+
 
 def backgroundJPG(MAX_W, MAX_H, backgroundColor):
     background = Image.new("RGB", (MAX_W, MAX_H), backgroundColor)
@@ -27,14 +35,17 @@ def backgroundJPG(MAX_W, MAX_H, backgroundColor):
 
     return background, draw
 
-#---------------------------------------------------------------------------------------------------------------------------#
-#CANVAS MANAGING
 
-def resize(image, x, y, resample = None):
-    image = image.resize((x, y), resample = resample)
+# -------------------------------- #
+# CANVAS MANAGING
+
+
+def resize(image, x, y, resample=None):
+    image = image.resize((x, y), resample=resample)
     return image
 
-def resizeToFit(image, sizeToFit, smaller = False, resample = None):
+
+def resizeToFit(image, sizeToFit, smaller=False, resample=None):
     """
     Resize to given size
     If smaller is False, resize the longest side to the given size
@@ -42,7 +53,7 @@ def resizeToFit(image, sizeToFit, smaller = False, resample = None):
     """
     x, y = image.width, image.height
 
-    if smaller == True:
+    if smaller:
         if x > y:
             x = int(x * sizeToFit / y)
             y = sizeToFit
@@ -55,18 +66,20 @@ def resizeToFit(image, sizeToFit, smaller = False, resample = None):
     else:
         x = int(x * sizeToFit / y)
         y = sizeToFit
-    
-    return resize(image, x, y, resample = resample)
 
-def resizeToFitSpace(image, sizesToFit, resample = None):
+    return resize(image, x, y, resample=resample)
+
+
+def resizeToFitSpace(image, sizesToFit, resample=None):
     """
     Nicely keeps ratio while not exceding the site to fit
     """
     x, y = image.size
-    ratio = min( sizesToFit[0]/x, sizesToFit[1]/y)
-    x, y = int(x*ratio), int(y*ratio)
+    ratio = min(sizesToFit[0] / x, sizesToFit[1] / y)
+    x, y = int(x * ratio), int(y * ratio)
 
     return resize(image, x, y, resample)
+
 
 def clearCanvas(draw):
     """
@@ -74,8 +87,9 @@ def clearCanvas(draw):
     draw: draw object
     """
     w, h = draw.im.size
-    draw.rectangle([0,0,w,h], fill = (0,0,0,0))
+    draw.rectangle([0, 0, w, h], fill=(0, 0, 0, 0))
     return draw
+
 
 def expand(image, x, y):
     """
@@ -87,20 +101,23 @@ def expand(image, x, y):
 
     w, h = image.size
     exp_image = backgroundPNG(w + x, h + y)[0]
-    exp_image = pasteItem(exp_image, image, x//2, y//2)
-    
+    exp_image = pasteItem(exp_image, image, x // 2, y // 2)
+
     return exp_image, ImageDraw.Draw(exp_image)
 
-#---------------------------------------------------------------------------------------------------------------------------#
+
+# -------------------------------- #
+
 
 def cutWithMask(background, item, mask):
     background = Image.composite(background, item, mask)
-    
     return background
+
 
 def cropImage(image, tupla):
     image = image.crop(tupla)
     return image
+
 
 def cropToRealSize(image):
     """
@@ -108,68 +125,90 @@ def cropToRealSize(image):
     """
     tupla = image.getbbox()
     image = cropImage(image, tupla)
-    
     return image
+
 
 def pasteItem(background, item, x, y):
     """
     If any problem is given, convert both images in RGBA
     Example: image.convert("RGBA")
     """
-    background.paste(item, (x,y), item)
+    background.paste(item, (x, y), item)
 
     return background
+
 
 def centerItem(background, item):
     """
     Compute the coordinates to center an image on a canvas
     """
     MAX_W, MAX_H = background.width, background.height
-    x, y = int((MAX_W - item.width)/2), int((MAX_H - item.height)/2)
+    x, y = int((MAX_W - item.width) / 2), int((MAX_H - item.height) / 2)
 
-    return x,y
+    return x, y
 
-#---------------------------------------------------------------------------------------------------------------------------#
-#TEXT SECTION
+
+# -------------------------------- #
+# TEXT SECTION
+
 
 def fontDefiner(fontPath, fontSize):
     """
     Initialize a font object
     """
     path = fontPath
-    font = ImageFont.truetype(str(path), size = fontSize)
-
+    font = ImageFont.truetype(str(path), size=fontSize)
     return font
+
 
 def drawText(x, y, draw, message, fontColor, font):
     """
     Simple method to draw text
     Suited for simple and single lines
     """
-    draw.text((x, y), message, fill = fontColor, font = font)
+    draw.text((x, y), message, fill=fontColor, font=font)
 
     return draw
 
-def drawTextInsideWidth(x1, x2, y, draw, message, font_name, font_size, font_color, justify = None):
+
+def drawTextInsideWidth(
+    x1, x2, y, draw, message, font_name, font_size, font_color, justify=None
+):
     font = fontDefiner(font_name, font_size)
     while getSize(message, font)[0] > x2 - x1:
         font_size -= 5
         font = fontDefiner(font_name, font_size)
-    
+
     if justify == "center":
-        x1 = int((draw.im.size[0] - getSize(message, font)[0])/2)
+        x1 = int((draw.im.size[0] - getSize(message, font)[0]) / 2)
     draw = drawText(x1, y, draw, message, font_color, font)
 
     return draw
 
+
 def centerSingleLineText(MAX_H, MAX_W, font, fontColor, message, draw):
     x, y = font.getsize(message)
-    x = (MAX_H - x)/2
-    y = (MAX_W - y)/2
-    draw = draw.text((x,y), message, fill = fontColor, font = font)
+    x = (MAX_H - x) / 2
+    y = (MAX_W - y) / 2
+    draw = draw.text((x, y), message, fill=fontColor, font=font)
     return draw
-    
-def drawMultiLine(left, right, y, phrase_wrapped, font, font_color, justify = "center", image = None, draw = None,  stroke = False, stroke_size = 10, stroke_color = 'black', space = 0):
+
+
+def drawMultiLine(
+    left,
+    right,
+    y,
+    phrase_wrapped,
+    font,
+    font_color,
+    justify="center",
+    image=None,
+    draw=None,
+    stroke=False,
+    stroke_size=10,
+    stroke_color="black",
+    space=0,
+):
     """
     This function is a little mess
     left and right: x coordinates and bounding boxes
@@ -190,33 +229,31 @@ def drawMultiLine(left, right, y, phrase_wrapped, font, font_color, justify = "c
     """
 
     values = getMultipleSize(phrase_wrapped, font)
-    height, tot_height, spaces = values[1], values[2], values[3]
-    
-    if stroke == True and image != None:
-        image_stroke, draw = backgroundPNG(*image.size)
+    height, _, spaces = values[1], values[2], values[3]
 
+    if stroke and image is not None:
+        image_stroke, draw = backgroundPNG(*image.size)
 
     for line in phrase_wrapped:
         if justify == "center":
-            x = int((right - left)/ 2) - int((getSize(line, font)[0])/2) + left
+            x = int((right - left) / 2) - int((getSize(line, font)[0]) / 2) + left
 
         elif justify == "right":
             x = right - int(getSize(line, font)[0])
-        
+
         elif justify == "left":
             x = left
 
-            
         draw = drawText(x, y, draw, line, font_color, font)
         y = y + height + spaces + space
 
-
-    if stroke == True:
+    if stroke:
         image_stroke = strokeImage(image_stroke, stroke, stroke_color)
-        image = pasteItem(image, image_stroke, 0,0)
+        image = pasteItem(image, image_stroke, 0, 0)
         return image
     else:
         return draw
+
 
 def fitSize(font_path, message, canvasW):
     """
@@ -228,6 +265,7 @@ def fitSize(font_path, message, canvasW):
     else:
         w, h = getSize(message, font)
     return 100 * canvasW // max(w, h)
+
 
 def getSize(text_string, font):
     """
@@ -244,6 +282,7 @@ def getSize(text_string, font):
 
     return (text_width, text_height)
 
+
 def getMultipleSize(text_wrapped, font):
     """
     Get multiline text sizes
@@ -258,21 +297,25 @@ def getMultipleSize(text_wrapped, font):
     for i in range(len(text_wrapped)):
         try:
             width, height = getSize(text_wrapped[i], font)
-        except:
-            width, height = 0,0
-        if width > max_width: max_width = width
-        if height > max_height : max_height = height
+        except Exception:
+            width, height = 0, 0
+        if width > max_width:
+            max_width = width
+        if height > max_height:
+            max_height = height
 
     spaces = int(max_height / 6)
     max_single_height = max_height
-    max_height = max_height * len(text_wrapped) + spaces * (len(text_wrapped)-1)
+    max_height = max_height * len(text_wrapped) + spaces * (len(text_wrapped) - 1)
 
     return max_width, max_single_height, max_height, spaces
 
-#---------------------------------------------------------------------------------------------------------------------------#
-#IMAGE MANIPULATION SECTION
 
-def rotate(img, angle, expand = True, pivot = None):
+# ---------------------------------------------------------------------------------------------------------------------------#
+# IMAGE MANIPULATION SECTION
+
+
+def rotate(img, angle, expand=True, pivot=None):
     """
     rotates an image of a given angle
     img: image object
@@ -280,8 +323,9 @@ def rotate(img, angle, expand = True, pivot = None):
     expand: make canvas of image to fit the rotation
     pivot: define in a tuple the center of the rotation, if None is centered
     """
-    img = img.rotate(angle, resample= Image.BICUBIC, center = pivot, expand = expand)
+    img = img.rotate(angle, resample=Image.BICUBIC, center=pivot, expand=expand)
     return img
+
 
 def rotateCV(image, angle):
     """
@@ -290,6 +334,7 @@ def rotateCV(image, angle):
     import numpy as np
     import cv2
     import math
+
     image = np.array(image)
     h, w = image.shape[:2]
     img_c = (w / 2, h / 2)
@@ -302,39 +347,48 @@ def rotateCV(image, angle):
     b_w = int((h * abs(sin)) + (w * abs(cos)))
     b_h = int((h * abs(cos)) + (w * abs(sin)))
 
-    rot[0, 2] += ((b_w / 2) - img_c[0])
-    rot[1, 2] += ((b_h / 2) - img_c[1])
+    rot[0, 2] += (b_w / 2) - img_c[0]
+    rot[1, 2] += (b_h / 2) - img_c[1]
 
     outImg = cv2.warpAffine(image, rot, (b_w, b_h), flags=cv2.INTER_NEAREST)
     return Image.fromarray(outImg)
+
 
 def flip(image):
     image = ImageOps.flip(image)
 
     return image
 
+
 def mirror(image):
     image = ImageOps.mirror(image)
 
     return image
 
-def strokeImage(original, stroke, stroke_color = "#FFFFFF"):
+
+def strokeImage(original, stroke, stroke_color="#FFFFFF"):
     import numpy as np
+
     blackThreshold = 1
     contour = original.filter(ImageFilter.GaussianBlur(radius=stroke))
-    r,g,b,a = contour.split() # supposing to have a RGBA PNG
-    contour = Image.merge('L',(a,))
-    contour = contour.point(lambda x: 0 if x<blackThreshold else 255)
+    r, g, b, a = contour.split()  # supposing to have a RGBA PNG
+    contour = Image.merge("L", (a,))
+    contour = contour.point(lambda x: 0 if x < blackThreshold else 255)
     contour = contour.convert("RGBA")
 
     datas = np.array(contour)
 
-    r1, g1, b1, a1= 0, 0, 0, 255 # Original value
-    r2, g2, b2, a2 = 255, 255, 255, 0 # Value that we want to replace it with
+    r1, g1, b1, a1 = 0, 0, 0, 255  # Original value
+    r2, g2, b2, a2 = 255, 255, 255, 0  # Value that we want to replace it with
 
-    red, green, blue, alpha = datas[:,:,0], datas[:,:,1], datas[:,:,2], datas[:,:,3]
+    red, green, blue, alpha = (
+        datas[:, :, 0],
+        datas[:, :, 1],
+        datas[:, :, 2],
+        datas[:, :, 3],
+    )
     mask = (red == r1) & (green == g1) & (blue == b1) & (alpha == a1)
-    datas[:,:,:4][mask] = [r2, g2, b2, a2]
+    datas[:, :, :4][mask] = [r2, g2, b2, a2]
     """
     datas = contour.getdata()
     newData = []
@@ -345,14 +399,14 @@ def strokeImage(original, stroke, stroke_color = "#FFFFFF"):
             newData.append(item)
     contour.putdata(newData)
     """
-   
 
     contour = Image.fromarray(datas)
     contour = fillWithColor(contour, stroke_color)
     contour = blurImage(contour, 1)
-    original = pasteItem(contour, original, 0,0)
+    original = pasteItem(contour, original, 0, 0)
 
     return original
+
 
 def blurImage(image, radius):
     """
@@ -360,29 +414,33 @@ def blurImage(image, radius):
     image: img object
     radius: quantity of blur
     """
-    image = image.filter(ImageFilter.GaussianBlur(radius = radius))
+    image = image.filter(ImageFilter.GaussianBlur(radius=radius))
     return image
+
 
 def roundCorners(im, rad):
     """
     Rounds the corners of an image to given radius
     """
-    mask = Image.new('L', im.size)
-    if rad > min(*im.size)//2:
-        rad = min(*im.size)//2
+    mask = Image.new("L", im.size)
+    if rad > min(*im.size) // 2:
+        rad = min(*im.size) // 2
     draw = ImageDraw.Draw(mask)
 
-    draw.ellipse((0,0, rad*2, rad*2), fill = 255)
-    draw.ellipse((0, im.height-rad*2, rad*2, im.height), fill = 255)
-    draw.ellipse((im.width - rad*2, 0, im.width, rad*2), fill = 255)
-    draw.ellipse((im.width - rad*2, im.height-rad*2, im.width, im.height), fill = 255)
-    
-    draw.rectangle([rad+1, 0+1, im.width-rad-1, im.height-1], fill = 255)
-    draw.rectangle([0+1, rad+1, im.width-1, im.height-rad-1], fill = 255)
+    draw.ellipse((0, 0, rad * 2, rad * 2), fill=255)
+    draw.ellipse((0, im.height - rad * 2, rad * 2, im.height), fill=255)
+    draw.ellipse((im.width - rad * 2, 0, im.width, rad * 2), fill=255)
+    draw.ellipse(
+        (im.width - rad * 2, im.height - rad * 2, im.width, im.height), fill=255
+    )
+
+    draw.rectangle([rad + 1, 0 + 1, im.width - rad - 1, im.height - 1], fill=255)
+    draw.rectangle([0 + 1, rad + 1, im.width - 1, im.height - rad - 1], fill=255)
 
     im.putalpha(mask)
 
     return im
+
 
 def roundCornersAngles(im, rad, angles):
     """
@@ -392,18 +450,25 @@ def roundCornersAngles(im, rad, angles):
     angles: list of numbers from 1 to 4, clockwise, starting from the upper left
     just pass the corners you want to be rounded
     """
-    circle = Image.new('L', (rad * 2, rad * 2), 0)
+    circle = Image.new("L", (rad * 2, rad * 2), 0)
     draw = ImageDraw.Draw(circle)
     draw.ellipse((0, 0, rad * 2, rad * 2), fill=255)
-    alpha = Image.new('L', im.size, 255)
+    alpha = Image.new("L", im.size, 255)
     w, h = im.size
 
-    if 1 in angles: alpha.paste(circle.crop((0, 0, rad, rad)), (0, 0)) #upper left
-    if 2 in angles: alpha.paste(circle.crop((rad, 0, rad * 2, rad)), (w - rad, 0)) #upper right
-    if 3 in angles: alpha.paste(circle.crop((rad, rad, rad * 2, rad * 2)), (w - rad, h - rad)) #bottom right
-    if 4 in angles: alpha.paste(circle.crop((0, rad, rad, rad * 2)), (0, h - rad)) #bottom left
+    if 1 in angles:
+        alpha.paste(circle.crop((0, 0, rad, rad)), (0, 0))  # upper left
+    if 2 in angles:
+        alpha.paste(circle.crop((rad, 0, rad * 2, rad)), (w - rad, 0))  # upper right
+    if 3 in angles:
+        alpha.paste(
+            circle.crop((rad, rad, rad * 2, rad * 2)), (w - rad, h - rad)
+        )  # bottom right
+    if 4 in angles:
+        alpha.paste(circle.crop((0, rad, rad, rad * 2)), (0, h - rad))  # bottom left
     im.putalpha(alpha)
     return im
+
 
 def fillWithColor(image, color):
     """
@@ -411,13 +476,14 @@ def fillWithColor(image, color):
     img: image object
     color: color to use
     """
-    image = image.convert('RGBA')
-    alpha = image.getchannel('A')
+    image = image.convert("RGBA")
+    alpha = image.getchannel("A")
 
-    image = Image.new('RGBA', image.size, color=color)
-    image.putalpha(alpha) 
+    image = Image.new("RGBA", image.size, color=color)
+    image.putalpha(alpha)
 
     return image
+
 
 def replaceColor(image, colorToReplace, replaceColor):
     """
@@ -434,24 +500,25 @@ def replaceColor(image, colorToReplace, replaceColor):
         for char in color:
             if char.isdigit():
                 rgbNumber += char
-            if char == ',' or char == ')':
+            if char == "," or char == ")":
                 rgb.append(int(rgbNumber))
                 rgbNumber = ""
         r, g, b = rgb[0], rgb[1], rgb[2]
-        return  r, g, b
-        
+        return r, g, b
+
     data = np.array(image)
     r, g, b, a = data.T
-    if colorToReplace == None: #replace all pixels
-        data[..., :-1] = (parser(replaceColor))
+    if colorToReplace is None:  # replace all pixels
+        data[..., :-1] = parser(replaceColor)
         image = Image.fromarray(data)
-    else: #replace single color
+    else:  # replace single color
         rr, gg, bb = parser(colorToReplace)
         colorToReplace = (r == rr) & (g == gg) & (b == bb)
-        data[..., :-1][colorToReplace.T] = (parser(replaceColor))
+        data[..., :-1][colorToReplace.T] = parser(replaceColor)
         image = Image.fromarray(data)
-    
+
     return image
+
 
 def setOpacity(image, opacity):
     """
@@ -461,10 +528,11 @@ def setOpacity(image, opacity):
     opacity: percentage from 0 to 100
     """
     import numpy as np
+
     image = np.array(image)
-    alpha = image[:,:,3]
-    mask = (alpha > 0)
-    image[mask, 3] = int(255* opacity /100)
+    alpha = image[:, :, 3]
+    mask = alpha > 0
+    image[mask, 3] = int(255 * opacity / 100)
 
     """
     #CHANGED?
@@ -474,6 +542,7 @@ def setOpacity(image, opacity):
     """
     return Image.fromarray(image)
 
+
 def deleteOpaque(image):
     """
     Turns semi-transparent pixel (not alpha 0) in transparent pixels
@@ -482,10 +551,11 @@ def deleteOpaque(image):
     import numpy as np
 
     image = np.array(image)
-    alpha = image[:,:,3]
-    mask = (alpha < 255)
+    alpha = image[:, :, 3]
+    mask = alpha < 255
     image[mask] = 0
     return Image.fromarray(image)
+
 
 def fillOpaque(image):
     """
@@ -495,10 +565,11 @@ def fillOpaque(image):
     import numpy as np
 
     image = np.array(image)
-    a = image[:,:,3]
-    mask = (a > 0)
+    a = image[:, :, 3]
+    mask = a > 0
     image[mask, 3] = 255
     return Image.fromarray(image)
+
 
 def fillTransparent(image, color):
     """
@@ -507,18 +578,19 @@ def fillTransparent(image, color):
     color: HEX string, RGB/RGBA tuple
     """
     import numpy as np
-    
-    if color[0] == '#':
-        rgba = *hexToRgb(color),255
+
+    if color[0] == "#":
+        rgba = *hexToRgb(color), 255
     elif len(color) == 3:
         rgba = *color, 255
     else:
         rgba = color
     image = np.array(image)
-    a = image[:,:,3]
-    mask = (a == 0)
-    image[:,:,:4][mask] = [*rgba]
+    a = image[:, :, 3]
+    mask = a == 0
+    image[:, :, :4][mask] = [*rgba]
     return Image.fromarray(image)
+
 
 def modifyBrightness(image, brightness):
     """
@@ -529,8 +601,9 @@ def modifyBrightness(image, brightness):
         numbers above 1 increase brightness
     """
     image = ImageEnhance.Brightness(image)
-    
+
     return image.enhance(brightness)
+
 
 def superSample(image, sample):
     """
@@ -539,156 +612,175 @@ def superSample(image, sample):
     sample: sampling multiplicator int(suggested: 2, 4, 8)
     """
     w, h = image.size
-    
+
     image = resize(image, int(w * sample), int(h * sample))
-    image = resize(image, w//sample, h//sample, Image.ANTIALIAS)
+    image = resize(image, w // sample, h // sample, Image.ANTIALIAS)
     return image
 
-#---------------------------------------------------------------------------------------------------------------------------#
-#CONVERSION SECTIONS
 
-#Trigonometry in case you need it
-def cart2Pol(x, y, centerW = 0, centerH = 0):
+# ---------------------------------------------------------------------------------------------------------------------------#
+# CONVERSION SECTIONS
+
+# Trigonometry in case you need it
+def cart2Pol(x, y, centerW=0, centerH=0):
     """
     Catersian to Polar
     centerW, centerH: to define a center point
     """
     x, y = x - centerW, y - centerH
     import math
-    r = math.sqrt(x**2 + y**2)
-    teta = math.atan2(y, x)*180/math.pi
+
+    r = math.sqrt(x ** 2 + y ** 2)
+    teta = math.atan2(y, x) * 180 / math.pi
     return r, teta
 
-def pol2Cart(r, degrees, centerW = 0, centerH = 0):
+
+def pol2Cart(r, degrees, centerW=0, centerH=0):
     """
     Polar to Cartesian
     centerW, centerH: to define a center point
     """
     import math
+
     x = int(r * math.cos(math.radians(degrees)) + centerW)
     y = int(r * math.sin(math.radians(degrees)) + centerH)
 
-    return x,y
+    return x, y
 
-#Conversion between color spaces
+
+# Conversion between color spaces
 def hexToRgb(hex):
     """
     hex: hex string
     """
-    hex = hex.replace('#', '')
-    r,g,b = [int(hex[i:i+2], 16) for i in range(0, len(hex), 2)]
+    hex = hex.replace("#", "")
+    r, g, b = [int(hex[i: i + 2], 16) for i in range(0, len(hex), 2)]
 
-    return r,g,b
+    return r, g, b
 
-def rgbToHex(r,g,b):
+
+def rgbToHex(r, g, b):
     """
     r, g, b: int(s)
     """
-    return "#{:02x}{:02x}{:02x}".format(r,g,b)
+    return "#{:02x}{:02x}{:02x}".format(r, g, b)
+
 
 def hslToRgb(H, S, L):
     """
     H, S, L: ints(s)
     """
-    S, L =  S/100, L/100
-    C = (1.0 - abs(2.0*L - 1.0)) * S
-    X = C*(1 - abs((H/60)%2 - 1.0))
-    M = L - C/2
+    S, L = S / 100, L / 100
+    C = (1.0 - abs(2.0 * L - 1.0)) * S
+    X = C * (1 - abs((H / 60) % 2 - 1.0))
+    M = L - C / 2
 
-    if H >= 0 and H < 60 : rgb = [C,X,0]
-    if H >= 60 and H < 120 : rgb = [X,C,0]
-    if H >= 120 and H < 180: rgb = [0,C,X]
-    if H >= 180 and H < 240: rgb = [0,X,C]
-    if H >= 240 and H < 300: rgb = [X,0,C]
-    if H >= 300 and H <= 360: rgb = [C,0,X]
+    if H >= 0 and H < 60:
+        rgb = [C, X, 0]
+    if H >= 60 and H < 120:
+        rgb = [X, C, 0]
+    if H >= 120 and H < 180:
+        rgb = [0, C, X]
+    if H >= 180 and H < 240:
+        rgb = [0, X, C]
+    if H >= 240 and H < 300:
+        rgb = [X, 0, C]
+    if H >= 300 and H <= 360:
+        rgb = [C, 0, X]
     try:
-        r, g, b = rgb[0]+M, rgb[1]+M, rgb[2]+M
-    except:
+        r, g, b = rgb[0] + M, rgb[1] + M, rgb[2] + M
+    except Exception:
         print("error " + str(H) + " " + str(S) + " " + str(L))
-    return (int(r*255), int(g*255), int(b*255))
+    return (int(r * 255), int(g * 255), int(b * 255))
+
 
 def rgbToHsl(R, G, B):
     """
     R, G, B: ints
     """
-    R = R/255
-    G = G/255
-    B = B/255
-    Cmax = max(R,G,B)
-    Cmin = min(R,G,B)
+    R = R / 255
+    G = G / 255
+    B = B / 255
+    Cmax = max(R, G, B)
+    Cmin = min(R, G, B)
     delta = Cmax - Cmin
     if delta == 0:
         H = 0
         S = 0
     elif Cmax == R:
-        H = 60 * (((G - B)/delta) % 6)
+        H = 60 * (((G - B) / delta) % 6)
     elif Cmax == G:
-        H = 60 * (((B - R)/delta) + 2)
+        H = 60 * (((B - R) / delta) + 2)
     elif Cmax == B:
-        H = 60 * (((R - G)/delta) + 4)
+        H = 60 * (((R - G) / delta) + 4)
 
     L = (Cmax + Cmin) / 2
 
     if delta != 0:
-        S = (delta / (1 - abs(2*L - 1)))
+        S = delta / (1 - abs(2 * L - 1))
 
-    return (H,S*100,L*100)    
+    return (H, S * 100, L * 100)
 
-#---------------------------------------------------------------------------------------------------------------------------#
-#COMPUTETIONAL METHODS
+
+# ---------------------------------------------------------------------------------------------------------------------------#
+# COMPUTETIONAL METHODS
 def calculateLuminance(image):
     """
     compute the overall luminance on an image
     """
-    import numpy as np  
-    image = image.resize((100, 100), resample = Image.BICUBIC)
+
+    image = image.resize((100, 100), resample=Image.BICUBIC)
     arr = np.array(image)
 
     R, G, B = 0.2126, 0.7152, 0.0722
-    import sys
+
     np.set_printoptions(threshold=False)
-    arr = arr[arr[:, :, 3]>0]
+    arr = arr[arr[:, :, 3] > 0]
 
     luminance_total = 0
     total_num_sum = 0
 
     for x in arr:
-        luminance_total += int(x[0]*R + x[1]*G + x[2]*B)
+        luminance_total += int(x[0] * R + x[1] * G + x[2] * B)
         total_num_sum += 1
 
-    luminance = int(luminance_total/total_num_sum/255*100)
+    luminance = int(luminance_total / total_num_sum / 255 * 100)
     return luminance
+
 
 def computeDominant(a):
     """
     return rgb color dominant on RGBA image
     """
     import numpy as np
+
     a = resizeToFit(a, 200)
     a = np.array(a)
-    a = a[a[:, :, 3]>0]
-    colors, count = np.unique(a.reshape(-1,a.shape[-1]), axis=0, return_counts=True)
+    a = a[a[:, :, 3] > 0]
+    colors, count = np.unique(a.reshape(-1, a.shape[-1]), axis=0, return_counts=True)
     rgb = list(colors[count.argmax()])[:-1]
     return rgb
 
-def randomColorExclusion(color, difference, color_range = 360):
+
+def randomColorExclusion(color, difference, color_range=360):
     """
     I can't remember why I wrote this
     """
     import random
-    
+
     exclude = []
     exclude.append(color)
-    for i in range(1, difference+1, 1):
+    for i in range(1, difference + 1, 1):
         exclude.append(checkColor(color + i, 360))
         exclude.append(checkColor(color - i, 360))
 
     num_colors = []
-    for i in range(color_range+1):
+    for i in range(color_range + 1):
         if i not in exclude:
             num_colors.append(i)
 
     return random.choice(num_colors)
+
 
 def checkColor(num, rule):
     """
@@ -697,15 +789,16 @@ def checkColor(num, rule):
     while num > rule:
         num -= rule
         if num < rule:
-            return abs(num-1)
+            return abs(num - 1)
     while num < 0:
         num = abs(num)
         num = rule - num
         if num > 0:
-            return abs(num+1)
+            return abs(num + 1)
     return num
 
-def addColor(color, adding, rule = 'hsl'):
+
+def addColor(color, adding, rule="hsl"):
     """
     Add or subtract values to color
     color: list of RGB or HSL values
@@ -715,14 +808,15 @@ def addColor(color, adding, rule = 'hsl'):
 
     """
     new_color = []
-    if rule == 'hsl':
+    if rule == "hsl":
         rule = [360, 100, 100]
-    elif rule == 'rgb':
+    elif rule == "rgb":
         rule = [255, 255, 255]
     for i in range(3):
         if adding != 0:
             new_color.append(checkColor(color[i] + adding[i], rule[i]))
     return new_color
+
 
 def inverseColor(color):
     """
@@ -734,29 +828,37 @@ def inverseColor(color):
     for char in color:
         if char.isdigit():
             rgbNumber += char
-        if char == ',' or char == ')':
+        if char == "," or char == ")":
             rgb.append(int(rgbNumber))
             rgbNumber = ""
     r, g, b = rgb[0], rgb[1], rgb[2]
-    inverseRGB = 'rgb(' + str(255 - r) + ',' + str(255 - g) + ',' + str(255 - b) + ')'
+    inverseRGB = "rgb(" + str(255 - r) + "," + str(255 - g) + "," + str(255 - b) + ")"
     return inverseRGB
-#---------------------------------------------------------------------------------------------------------------------------#
-#MISC SECTION
 
-def drawShadow(image, background=0xffffff, color = "rgb(0,0,0)", offset = 20, radius = 30):
-    canvasB, canvasD = backgroundPNG(image.size[0] + offset*20, image.size[1] + offset*20)
-    alpha = image.getchannel('A')
-    shadow = Image.new('RGBA', image.size, color = color)
+
+# ---------------------------------------------------------------------------------------------------------------------------#
+# MISC SECTION
+
+
+def drawShadow(image, background=0xFFFFFF, color="rgb(0,0,0)", offset=20, radius=30):
+    canvasB, canvasD = backgroundPNG(
+        image.size[0] + offset * 20, image.size[1] + offset * 20
+    )
+    alpha = image.getchannel("A")
+    shadow = Image.new("RGBA", image.size, color=color)
     shadow.putalpha(alpha)
-  
-    shadow = resize(shadow, shadow.size[0] + int(offset/2), shadow.size[1] + int(offset/2))
-    
-    x,y = centerItem(canvasB, shadow)
-    x,y = x+25, y+30
+
+    shadow = resize(
+        shadow, shadow.size[0] + int(offset / 2), shadow.size[1] + int(offset / 2)
+    )
+
+    x, y = centerItem(canvasB, shadow)
+    x, y = x + 25, y + 30
     canvasB = pasteItem(canvasB, shadow, x, y)
-    canvasB = canvasB.filter(ImageFilter.GaussianBlur(radius = radius))
+    canvasB = canvasB.filter(ImageFilter.GaussianBlur(radius=radius))
 
     return canvasB
+
 
 def spreadPattern(canvas, pattern):
     """
@@ -767,9 +869,9 @@ def spreadPattern(canvas, pattern):
 
     s = min(*pattern.size)
 
-    canvas = pasteItem(canvas, pattern, 0,0)
+    canvas = pasteItem(canvas, pattern, 0, 0)
     while s < canvas.width or s < canvas.height:
-        
+
         if s < canvas.height:
             canvas = pasteItem(canvas, cropToRealSize(canvas), 0, s)
         if s < canvas.width:
@@ -778,17 +880,18 @@ def spreadPattern(canvas, pattern):
 
     return canvas
 
+
 def image_to_data(im):
     """
     This is for Pysimplegui library
     Converts image into data to be used inside GUIs
     """
     from io import BytesIO
+
     with BytesIO() as output:
         im.save(output, format="PNG")
         data = output.getvalue()
     return data
-
 
 
 """ DEPRECATED THINGS OR NOT USED ANYMORE, PROBABLY PERFORMANCE ISSUES
@@ -845,7 +948,6 @@ def blurEdges(image, radius):
 
     return Image.fromarray(out)
 
-    
 def roundCorners(im, rad):
     circle = Image.new('L', (rad * 2, rad * 2), 0)
     draw = ImageDraw.Draw(circle)
