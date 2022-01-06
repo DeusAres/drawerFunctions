@@ -4,6 +4,7 @@ A collection of PIL, Numpy and OpenCV functions to manipulate images
 Requirements: python3+, pillow, numpy, opencv
 
 I've coded this because I'm lazy, and since I've found myself writing always the same sets of instructions, I've decided to wrap them up in this collection of little functions.
+
 It's filled with common operations, from stroking PNGs to drawing Text, conversions between color spaces, or manipulating images
 
 Should be intuitive but don't forget to read the little docstrings I've provided 
