@@ -41,8 +41,7 @@ def backgroundJPG(MAX_W, MAX_H, backgroundColor):
 
 
 def resize(image, x, y, resample=None):
-    image = image.resize((x, y), resample=resample)
-    return image
+    return image.resize((x, y), resample=resample)
 
 
 def resizeToFit(image, sizeToFit, smaller=False, resample=None):
@@ -428,16 +427,17 @@ def roundCorners(im, rad):
     draw = ImageDraw.Draw(mask)
 
     draw.ellipse((0, 0, rad * 2, rad * 2), fill=255)
-    draw.ellipse((0, im.height - rad * 2, rad * 2, im.height), fill=255)
-    draw.ellipse((im.width - rad * 2, 0, im.width, rad * 2), fill=255)
+    draw.ellipse((0, im.height - rad * 2 -2, rad * 2, im.height-1) , fill=255)
+    draw.ellipse((im.width - rad * 2, 1, im.width, rad * 2), fill=255)
     draw.ellipse(
-        (im.width - rad * 2, im.height - rad * 2, im.width, im.height), fill=255
+        (im.width - rad * 2, im.height - rad * 2, im.width-1, im.height-1), fill=255
     )
-
-    draw.rectangle([rad + 1, 0 + 1, im.width - rad - 1, im.height - 1], fill=255)
-    draw.rectangle([0 + 1, rad + 1, im.width - 1, im.height - rad - 1], fill=255)
-
+    draw.rectangle([rad, 0, im.width - rad, im.height], fill=255)
+    draw.rectangle([0, rad, im.width, im.height - rad], fill=255)
+    
+    mask = superSample(mask, 8)
     im.putalpha(mask)
+    
 
     return im
 
@@ -585,6 +585,7 @@ def fillTransparent(image, color):
         rgba = *color, 255
     else:
         rgba = color
+    print(rgba)
     image = np.array(image)
     a = image[:, :, 3]
     mask = a == 0
@@ -614,7 +615,8 @@ def superSample(image, sample):
     w, h = image.size
 
     image = resize(image, int(w * sample), int(h * sample))
-    image = resize(image, w // sample, h // sample, Image.ANTIALIAS)
+    image = resize(image, image.width // sample, image.height // sample, Image.ANTIALIAS)
+
     return image
 
 
