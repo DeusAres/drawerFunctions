@@ -6,9 +6,15 @@ from PIL import (Image,
                  ImageEnhance
                  )
 import numpy as np
+from io import BytesIO
 
 
 def openImage(image):
+    """
+    Open image
+    image: str path to image
+    return Image, ImageDraw
+    """
     image = Image.open(image)
     draw = ImageDraw.Draw(image)
     return image, draw
@@ -23,13 +29,27 @@ def openImageAsPNG(image):
 
 
 def backgroundPNG(MAX_W, MAX_H, backgroundColor=None):
+    """
+    A new canvas in RGBA mode
+    MAX_W: int, width of canvas
+    MAX_H: int, height of canvas
+    backgroundColor: None, str (name, #hexcode), tuple (r,g,b,a) # a=255 if not included in tuple
+    return Image, ImageDraw
+    """
     background = Image.new("RGBA", (MAX_W, MAX_H), color=backgroundColor)
     draw = ImageDraw.Draw(background)
 
-    return background, draw
+    return [background, draw]
 
 
 def backgroundJPG(MAX_W, MAX_H, backgroundColor):
+    """
+    A new canvas in RGBA mode
+    MAX_W: int, width of canvas
+    MAX_H: int, height of canvas
+    backgroundColor: None, str (name, #hexcode), tuple (r,g,b) 
+    return Image, ImageDraw
+    """
     background = Image.new("RGB", (MAX_W, MAX_H), backgroundColor)
     draw = ImageDraw.Draw(background)
 
@@ -39,16 +59,43 @@ def backgroundJPG(MAX_W, MAX_H, backgroundColor):
 # -------------------------------- #
 # CANVAS MANAGING
 
+def convert(image, mode):
+    """
+    Conver a canvas from one mode to another
+    image: Image object
+    mode: str ("RGBA", "RGB", "L", "LA", "P")
 
-def resize(image, x, y, resample=None):
-    return image.resize((x, y), resample=resample)
+    return Image, ImageDraw
+    """
+    image = image.convert(mode)
+    return image, ImageDraw.Draw(image)
 
+def resize(image, W, H, resample=None):
+    """
+    Resize Image to given size
+
+    image: Image object
+    W: int, width of canvas
+    H: int, height of canvas
+    resample: Image methods of resampling (Image.ANTIALIAS, Image.BICUBIC...)
+
+    return Image, ImageDraw
+    """
+    image = image.resize((W, H), resample=resample)
+    return image, ImageDraw.Draw(image)
 
 def resizeToFit(image, sizeToFit, smaller=False, resample=None):
     """
-    Resize to given size
+    Resize to given size mantaining aspect ratio
     If smaller is False, resize the longest side to the given size
     Otherwise True, the shortest side to the given size
+
+    image: Image object
+    sizeToFit: int (size to fit)
+    smaller: bool () define which side should be fitted to sizeToFit
+    resample: Image methods of resampling (Image.ANTIALIAS, Image.BICUBIC...)
+
+    return Image, ImageDraw
     """
     x, y = image.width, image.height
 
@@ -66,12 +113,21 @@ def resizeToFit(image, sizeToFit, smaller=False, resample=None):
         x = int(x * sizeToFit / y)
         y = sizeToFit
 
+    
     return resize(image, x, y, resample=resample)
 
 
 def resizeToFitSpace(image, sizesToFit, resample=None):
     """
     Nicely keeps ratio while not exceding the site to fit
+
+    image: Image object
+    sizeToFit: int (size to fit)
+    smaller: bool () define which side should be fitted to sizeToFit
+    resample: Image methods of resampling (Image.ANTIALIAS, Image.BICUBIC...)
+
+    return Image, ImageDraw
+
     """
     x, y = image.size
     ratio = min(sizesToFit[0] / x, sizesToFit[1] / y)
@@ -83,19 +139,25 @@ def resizeToFitSpace(image, sizesToFit, resample=None):
 def clearCanvas(draw):
     """
     Clear an RGBA image with fresh transparent pixels
-    draw: draw object
+    draw: ImageDraw object
+
+    return Draw
     """
     w, h = draw.im.size
     draw.rectangle([0, 0, w, h], fill=(0, 0, 0, 0))
+
     return draw
 
 
 def expand(image, x, y):
     """
     Expand the image canvas while keeping the image centered
-    image: image object
+
+    image: Image object
     x: width to add
     y: height to add
+
+    return Image, ImageDraw
     """
 
     w, h = image.size
@@ -115,7 +177,7 @@ def cutWithMask(background, item, mask):
 
 def cropImage(image, tupla):
     image = image.crop(tupla)
-    return image
+    return image, ImageDraw.Draw(image)
 
 
 def cropToRealSize(image):
@@ -123,8 +185,8 @@ def cropToRealSize(image):
     Crop the image to real size, useful to crop PNGs
     """
     tupla = image.getbbox()
-    image = cropImage(image, tupla)
-    return image
+    image, draw = cropImage(image, tupla)
+    return image, draw
 
 
 def pasteItem(background, item, x, y):
@@ -160,15 +222,28 @@ def fontDefiner(fontPath, fontSize):
     return font
 
 
-def drawText(x, y, draw, message, fontColor, font):
+def drawText(x, y, draw, message, fontColor, font, anchor = 'lt'):
     """
     Simple method to draw text
-    Suited for simple and single lines
+    x: int (coordinates for anchor point)
+    y: int (coordinates for anchor point)
+    draw: ImageDraw object
+    message: str (text)
+    fontColor: color
+    font: ImageFont object
+    anchor: starting point
+    - #https://pillow.readthedocs.io/en/stable/handbook/text-anchors.html#text-anchors
+    reference to this for anchor points
+
+    return ImageDraw
     """
-    draw.text((x, y), message, fill=fontColor, font=font)
+    if type(message) == str:
+        draw.text((x, y), message, fill=fontColor, anchor=anchor, font=font, )
+    elif type(message) in [list, tuple]:
+        draw.multiline_text((x, y), "\n".join(message), fill=fontColor, anchor=anchor, font=font, )
+
 
     return draw
-
 
 def drawTextInsideWidth(
     x1, x2, y, draw, message, font_name, font_size, font_color, justify=None
@@ -272,14 +347,16 @@ def getSize(text_string, font):
     text_string: string
     font: font object
     return text_width, text_height
-    """
     # https://stackoverflow.com/a/46220683/9263761
     ascent, descent = font.getmetrics()
 
     text_width = font.getmask(text_string).getbbox()[2]
-    text_height = font.getmask(text_string).getbbox()[3] + descent
+    text_height = font.getmask(text_string).getbbox()[3] - ascent - descent
+    """
+    ascent, descent = font.getmetrics()
+    text_width, text_height = font.getsize(text_string)
 
-    return (text_width, text_height)
+    return (text_width, text_height-descent)
 
 
 def getMultipleSize(text_wrapped, font):
@@ -323,13 +400,15 @@ def rotate(img, angle, expand=True, pivot=None):
     pivot: define in a tuple the center of the rotation, if None is centered
     """
     img = img.rotate(angle, resample=Image.BICUBIC, center=pivot, expand=expand)
-    return img
+    return img, ImageDraw.Draw(img)
 
-
+""" # Defeating the requirement of cv2
 def rotateCV(image, angle):
-    """
+"""
+"""
     a slightly better algorithm of image rotation
-    """
+"""
+"""
     import numpy as np
     import cv2
     import math
@@ -351,7 +430,7 @@ def rotateCV(image, angle):
 
     outImg = cv2.warpAffine(image, rot, (b_w, b_h), flags=cv2.INTER_NEAREST)
     return Image.fromarray(outImg)
-
+"""
 
 def flip(image):
     image = ImageOps.flip(image)
@@ -435,7 +514,7 @@ def roundCorners(im, rad):
     draw.rectangle([rad, 0, im.width - rad, im.height], fill=255)
     draw.rectangle([0, rad, im.width, im.height - rad], fill=255)
     
-    mask = superSample(mask, 8)
+    mask,_ = superSample(mask, 8)
     im.putalpha(mask)
     
 
@@ -493,6 +572,11 @@ def replaceColor(image, colorToReplace, replaceColor):
     """
     import numpy as np
 
+    if "#" in colorToReplace:
+        colorToReplace = [*hexToRgb(colorToReplace), 255]
+    if "#" in replaceColor:
+        replaceColor = [*hexToRgb(replaceColor), 255]
+    
     def parser(color):
         color = str(color)
         rgbNumber = ""
@@ -614,10 +698,12 @@ def superSample(image, sample):
     """
     w, h = image.size
 
-    image = resize(image, int(w * sample), int(h * sample))
-    image = resize(image, image.width // sample, image.height // sample, Image.ANTIALIAS)
+    image = image.resize((int(w * sample), int(h * sample)), resample=Image.LANCZOS)
+    image = image.resize((image.width // sample, image.height // sample), resample=Image.ANTIALIAS)
 
-    return image
+    
+    return image, ImageDraw.Draw(image)
+
 
 
 # ---------------------------------------------------------------------------------------------------------------------------#
@@ -721,7 +807,7 @@ def rgbToHsl(R, G, B):
     if delta != 0:
         S = delta / (1 - abs(2 * L - 1))
 
-    return (H, S * 100, L * 100)
+    return (int(H), int(S * 100), int(L * 100))
 
 
 # ---------------------------------------------------------------------------------------------------------------------------#
@@ -756,13 +842,32 @@ def computeDominant(a):
     """
     import numpy as np
 
-    a = resizeToFit(a, 200)
+    a, _ = resizeToFit(a, 200)
     a = np.array(a)
     a = a[a[:, :, 3] > 0]
     colors, count = np.unique(a.reshape(-1, a.shape[-1]), axis=0, return_counts=True)
     rgb = list(colors[count.argmax()])[:-1]
     return rgb
 
+def computeDominant2(img):
+    """
+    a secondary method to get dominant color of image
+    """
+    img = img.resize((1,1)).convert("RGB")
+    return img.getpixel((0,0))
+
+
+def complementary(color):
+    if '#' in color:
+        color = hexToRgb(color)
+
+    color = rgbToHsl(*color)
+
+    color = addColor(color, [180,0,0])
+
+    return rgbToHsl(*color)
+
+    
 
 def randomColorExclusion(color, difference, color_range=360):
     """
@@ -888,12 +993,10 @@ def image_to_data(im):
     This is for Pysimplegui library
     Converts image into data to be used inside GUIs
     """
-    from io import BytesIO
 
     with BytesIO() as output:
         im.save(output, format="PNG")
-        data = output.getvalue()
-    return data
+    return output.getvalue()
 
 
 """ DEPRECATED THINGS OR NOT USED ANYMORE, PROBABLY PERFORMANCE ISSUES
