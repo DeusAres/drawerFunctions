@@ -119,11 +119,10 @@ def resizeToFit(image, sizeToFit, smaller=False, resample=None):
 
 def resizeToFitSpace(image, sizesToFit, resample=None):
     """
-    Nicely keeps ratio while not exceding the site to fit
+    Nicely keeps ratio while not exceding the canvas
 
     image: Image object
-    sizeToFit: int (size to fit)
-    smaller: bool () define which side should be fitted to sizeToFit
+    sizeToFit: list of ints (image size to fit)
     resample: Image methods of resampling (Image.ANTIALIAS, Image.BICUBIC...)
 
     return Image, ImageDraw
